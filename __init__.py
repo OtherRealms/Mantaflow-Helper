@@ -173,10 +173,10 @@ class MFHELPER_PT_noise(bpy.types.Panel):
 
         split = layout.split()
 
-        if domain.use_noise and domain.domain_type == 'MODULAR':
+        if domain.use_noise and domain.cache_type== 'MODULAR':
             bake_incomplete = (domain.cache_frame_pause_noise < domain.cache_frame_end)
             
-            if not domain.has_cache_baked_data and domain.cache_type == 'MODULAR':
+            if not domain.has_cache_baked_data:
                 note = layout.split()
                 note_flag = False
                 note.enabled = note_flag
