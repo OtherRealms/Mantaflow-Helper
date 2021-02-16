@@ -191,12 +191,12 @@ class MFHELPER_PT_particles(bpy.types.Panel):
                 bake_incomplete = (domain.cache_frame_pause_particles < domain.cache_frame_end)
                 if domain.has_cache_baked_particles and not domain.is_cache_baking_particles and bake_incomplete:
                     col = split.column()
-                    col.operator("mantaflowhelper.bake", text="Resume").mode =8
+                    col.operator("mantaflowhelper.bake", text="Resume",icon = 'PARTICLES').mode =8
                     col = split.column()
-                    col.operator("mantaflowhelper.bake", text="Free").mode = 9
+                    col.operator("mantaflowhelper.bake", text="Free",icon = 'PARTICLES').mode = 9
                 elif not domain.has_cache_baked_particles and domain.is_cache_baking_particles:
                     split.enabled = False
-                    split.operator("mantaflowhelper.bake", text="Baking Particles - ESC to pause").mode =2
+                    split.operator("mantaflowhelper.bake", text="Baking Particles - ESC to pause",icon = 'PARTICLES').mode =2
                 elif not domain.has_cache_baked_particles and not domain.is_cache_baking_particles:
                     split.operator("mantaflowhelper.bake", text="Bake Particles",icon = 'PARTICLES').mode =8
                 else:
