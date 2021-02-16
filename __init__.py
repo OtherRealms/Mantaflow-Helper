@@ -16,7 +16,7 @@ bl_info = {
     "author" : "Pablo Tochez A. contact@pablotochez.com, Other Realms",
     "description" : "Provides controls for a domain object",
     "blender" : (2, 80, 0),
-    "version" : (0, 0, 1),
+    "version" : (0, 0, 2),
     "location" : "3D View -> N-Panel-> Mantaflow Helper",
     "warning" : "",
     "category" : "Interface"
@@ -38,18 +38,18 @@ class MFHELPER_PT_Panel(bpy.types.Panel):
         layout = self.layout
         layout.use_property_split = True
         row = layout.row()
-        row.prop(scene, 'MF_domain')
+        row.prop(scene, 'mf_domain')
         
     
-        if scene.MF_domain != None:
-            if scene.MF_domain.name not in scene.objects.keys():
+        if scene.mf_domain != None:
+            if scene.mf_domain.name not in scene.objects.keys():
                 row = layout.row()
                 row.alert = True
                 row.label(text= "Domain Missing!",icon = "ERROR")
             else:
                 row.operator("mantaflowhelper.select_domain" ,icon = 'RESTRICT_SELECT_OFF',text='')
         
-            domain = scene.MF_domain.modifiers['Fluid'].domain_settings
+            domain = scene.mf_domain.modifiers['Fluid'].domain_settings
             
             flow = layout.grid_flow(row_major=True, columns=0, even_columns=True, even_rows=False, align=False)
             col = flow
@@ -100,17 +100,17 @@ class MFHELPER_PT_particles(bpy.types.Panel):
 
     @classmethod
     def poll(cls, context):
-        ob = context.scene.MF_domain
+        ob = context.scene.mf_domain
         return ob != None and ob.modifiers['Fluid'].domain_settings.domain_type == 'LIQUID'
 
     def draw_header(self, context):
         scene = context.scene
-        md = scene.MF_domain.modifiers['Fluid'].domain_settings
+        md = scene.mf_domain.modifiers['Fluid'].domain_settings
 
     def draw(self,context):
         layout = self.layout
         scene = context.scene
-        domain = domain = scene.MF_domain.modifiers['Fluid'].domain_settings
+        domain = domain = scene.mf_domain.modifiers['Fluid'].domain_settings
         is_baking_any = domain.is_cache_baking_any
         has_baked_particles = domain.has_cache_baked_particles
         using_particles = domain.use_spray_particles or domain.use_foam_particles or domain.use_bubble_particles
@@ -156,12 +156,12 @@ class MFHELPER_PT_noise(bpy.types.Panel):
 
     @classmethod
     def poll(cls, context):
-        ob = context.scene.MF_domain
+        ob = context.scene.mf_domain
         return ob != None and ob.modifiers['Fluid'].domain_settings.domain_type == 'GAS'
 
     def draw_header(self, context):
         scene = context.scene
-        md = scene.MF_domain.modifiers['Fluid'].domain_settings
+        md = scene.mf_domain.modifiers['Fluid'].domain_settings
         is_baking_any = md.is_cache_baking_any
         self.layout.enabled = not is_baking_any
         self.layout.prop(md, "use_noise", text="")
@@ -169,14 +169,14 @@ class MFHELPER_PT_noise(bpy.types.Panel):
     def draw(self,context):
         layout = self.layout
         scene= context.scene
-        domain = scene.MF_domain.modifiers['Fluid'].domain_settings
+        domain = scene.mf_domain.modifiers['Fluid'].domain_settings
 
         split = layout.split()
 
-        if domain.use_noise and domain.cache_type== 'MODULAR':
+        if domain.use_noise and domain.cache_type == 'MODULAR':
             bake_incomplete = (domain.cache_frame_pause_noise < domain.cache_frame_end)
             
-            if not domain.has_cache_baked_data:
+            if  not domain.has_cache_baked_data:
                 note = layout.split()
                 note_flag = False
                 note.enabled = note_flag
@@ -207,12 +207,12 @@ class MFHELPER_PT_mesh(bpy.types.Panel):
 
     @classmethod
     def poll(cls, context):
-        ob = context.scene.MF_domain
+        ob = context.scene.mf_domain
         return ob != None and ob.modifiers['Fluid'].domain_settings.domain_type == 'LIQUID'
 
     def draw_header(self, context):
         scene = context.scene
-        md = scene.MF_domain.modifiers['Fluid'].domain_settings
+        md = scene.mf_domain.modifiers['Fluid'].domain_settings
         is_baking_any = md.is_cache_baking_any
         self.layout.enabled = not is_baking_any
         self.layout.prop(md, "use_mesh", text="")
@@ -221,7 +221,7 @@ class MFHELPER_PT_mesh(bpy.types.Panel):
         layout = self.layout
         layout.use_property_split = True
         scene = context.scene
-        domain = scene.MF_domain.modifiers['Fluid'].domain_settings
+        domain = scene.mf_domain.modifiers['Fluid'].domain_settings
         if domain.cache_type == 'MODULAR':
 
             # Deactivate bake operator if data has not been baked yet.
@@ -256,13 +256,13 @@ class MFHELPER_OT_selectDomain(bpy.types.Operator):
 
     @classmethod
     def poll(self,context):
-        return context.scene.MF_domain
+        return context.scene.mf_domain
                 
     def execute(self,context):
         for obj in context.selectable_objects:
             obj.select_set(state=False)
         scene = context.scene
-        domain = scene.MF_domain
+        domain = scene.mf_domain
         domain.select_set(state=True)
         context.view_layer.objects.active = domain
         for area in context.window.screen.areas:
@@ -279,11 +279,13 @@ class MFHELPER_OT_bake(bpy.types.Operator):
     mode: IntProperty()
     @classmethod
     def poll(self,context):
-        return context.scene.MF_domain
+        return context.scene.mf_domain
 
     def execute(self,context):
         override = bpy.context.copy()
-        override['active_object'] = context.scene.MF_domain
+        override['active_object'] = context.scene.mf_domain
+        override['object'] = context.scene.mf_domain
+        override['selected_objects'] = [context.scene.mf_domain]
 
 
         if self.mode ==0:
@@ -329,7 +331,7 @@ def register():
     for cls in classes:
         register_class(cls)
 
-    bpy.types.Scene.MF_domain = PointerProperty(name = 'Domain', type = bpy.types.Object, poll = domain_callback)
+    bpy.types.Scene.mf_domain = PointerProperty(name = 'Domain', type = bpy.types.Object, poll = domain_callback)
 
 
 def unregister():
@@ -338,6 +340,6 @@ def unregister():
         unregister_class(cls)
 
 
-    del bpy.types.Scene.MF_domain
+    del bpy.types.Scene.mf_domain
 
 
