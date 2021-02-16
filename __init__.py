@@ -15,7 +15,7 @@ bl_info = {
     "name" : "MantaFlow Helper",
     "author" : "Pablo Tochez A. contact@pablotochez.com, Other Realms",
     "description" : "Provides controls for a domain object",
-    "blender" : (2, 90, 0),
+    "blender" : (2, 80, 0),
     "version" : (0, 0, 2),
     "location" : "3D View -> N-Panel-> Mantaflow Helper",
     "warning" : "",
@@ -110,14 +110,69 @@ class MFHELPER_PT_particles(bpy.types.Panel):
     def draw(self,context):
         layout = self.layout
         scene = context.scene
+        
         domain = domain = scene.mf_domain.modifiers['Fluid'].domain_settings
         is_baking_any = domain.is_cache_baking_any
         has_baked_particles = domain.has_cache_baked_particles
+        
+
         using_particles = domain.use_spray_particles or domain.use_foam_particles or domain.use_bubble_particles
-        col = layout.row()
+        
+        layout.use_property_decorate = False
+        
+
+        col = layout.column(align=False)
+        col.use_property_split = True
+
+        
+        col.prop(domain, "sndparticle_combined_export")
+        col = layout.column(align=False)
+        col.enabled = not is_baking_any and not has_baked_particles
+        
+        col.use_property_split = False
+        col.prop(domain, "particle_scale", text="Upres Factor")
+        col.prop(domain, "sndparticle_potential_radius", text="Potential Radius")
+        col.prop(domain, "sndparticle_update_radius", text="Particle Update Radius")
+        col.prop(domain, "sndparticle_life_max", text="Particle Life Max")
+        col.prop(domain, "sndparticle_life_min", text="Particle Life Min")
+        col.prop(domain, "sndparticle_sampling_trappedair", text="Trapped Air Particle Sampling")
+        col.prop(domain, "sndparticle_potential_max_trappedair", text="Trapped Air Potential Max")
+        col.prop(domain, "sndparticle_potential_min_trappedair", text="Trapped Air Potential Min")
+        col.separator()
+
+        #col = layout.column(align=True)
+        
+
         col.prop(domain, "use_spray_particles", text="Spray")
+
+        if domain.use_spray_particles:
+            col = layout.column(align=True)
+            col.enabled = not is_baking_any and not has_baked_particles
+            col.prop(domain, "sndparticle_potential_max_energy", text="Kinetic Energy Potential Maximum")
+            col.prop(domain, "sndparticle_potential_min_energy", text="Minimum")
+            col.separator()
+
         col.prop(domain, "use_foam_particles", text="Foam")
+
+        if domain.use_foam_particles:
+            col = layout.column(align=True)
+            col.enabled = not is_baking_any and not has_baked_particles
+            col.prop(domain, "sndparticle_potential_max_wavecrest", text="Wave Crest Potential Maximum")
+            col.prop(domain, "sndparticle_potential_min_wavecrest", text="Minimum")
+            col.prop(domain, "sndparticle_sampling_wavecrest", text="Wave Crest Particle Sampling")
+            col.separator()
+
         col.prop(domain, "use_bubble_particles", text="Bubbles")
+
+        if domain.use_bubble_particles:
+            col = layout.column(align=True)
+            col.enabled = not is_baking_any and not has_baked_particles
+            
+            col.prop(domain, "sndparticle_bubble_buoyancy", text="Bubble Buoyancy")
+            col.prop(domain, "sndparticle_bubble_drag", text="Bubble Drag")
+            col.separator()
+
+
 
         if domain.cache_type == 'MODULAR' and True in (domain.use_spray_particles,domain.use_foam_particles,domain.use_bubble_particles):
             col = layout.column()
@@ -136,16 +191,16 @@ class MFHELPER_PT_particles(bpy.types.Panel):
                 bake_incomplete = (domain.cache_frame_pause_particles < domain.cache_frame_end)
                 if domain.has_cache_baked_particles and not domain.is_cache_baking_particles and bake_incomplete:
                     col = split.column()
-                    col.operator("fluid.bake_particles", text="Resume")
+                    col.operator("mantaflowhelper.bake", text="Resume").mode =8
                     col = split.column()
-                    col.operator("fluid.free_particles", text="Free")
+                    col.operator("mantaflowhelper.bake", text="Free").mode = 9
                 elif not domain.has_cache_baked_particles and domain.is_cache_baking_particles:
                     split.enabled = False
-                    split.operator("fluid.pause_bake", text="Baking Particles - ESC to pause")
+                    split.operator("mantaflowhelper.bake", text="Baking Particles - ESC to pause").mode =2
                 elif not domain.has_cache_baked_particles and not domain.is_cache_baking_particles:
-                    split.operator("fluid.bake_particles", text="Bake Particles")
+                    split.operator("mantaflowhelper.bake", text="Bake Particles",icon = 'PARTICLES').mode =8
                 else:
-                    split.operator("fluid.free_particles", text="Free Particles")
+                    split.operator("mantaflowhelper.bake", text="Free Particles",icon = 'PARTICLES').mode =9
 
 
 class MFHELPER_PT_noise(bpy.types.Panel):
@@ -245,9 +300,9 @@ class MFHELPER_PT_mesh(bpy.types.Panel):
                 split.enabled = False
                 split.operator("mantaflowhelper.bake", text="Baking Mesh - ESC to pause").mode = 2
             elif not domain.has_cache_baked_mesh and not domain.is_cache_baking_mesh:
-                split.operator("mantaflowhelper.bake", text="Bake Mesh").mode = 10
+                split.operator("mantaflowhelper.bake", text="Bake Mesh",icon = 'MESH_ICOSPHERE').mode = 10
             else:
-                split.operator("mantaflowhelper.bake", text="Free Mesh").mode = 11
+                split.operator("mantaflowhelper.bake", text="Free Mesh",icon = 'MESH_ICOSPHERE').mode = 11
 
 class MFHELPER_OT_selectDomain(bpy.types.Operator):
     bl_idname = "mantaflowhelper.select_domain" 
