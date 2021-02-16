@@ -15,7 +15,7 @@ bl_info = {
     "name" : "MantaFlow Helper",
     "author" : "Pablo Tochez A. contact@pablotochez.com, Other Realms",
     "description" : "Provides controls for a domain object",
-    "blender" : (2, 80, 0),
+    "blender" : (2, 90, 0),
     "version" : (0, 0, 2),
     "location" : "3D View -> N-Panel-> Mantaflow Helper",
     "warning" : "",
@@ -136,16 +136,16 @@ class MFHELPER_PT_particles(bpy.types.Panel):
                 bake_incomplete = (domain.cache_frame_pause_particles < domain.cache_frame_end)
                 if domain.has_cache_baked_particles and not domain.is_cache_baking_particles and bake_incomplete:
                     col = split.column()
-                    col.operator("fluid.bake_particles", text="Resume").mode = 8
+                    col.operator("fluid.bake_particles", text="Resume")
                     col = split.column()
-                    col.operator("mantaflowhelper.bake", text="Free").mode = 9 
+                    col.operator("fluid.free_particles", text="Free")
                 elif not domain.has_cache_baked_particles and domain.is_cache_baking_particles:
                     split.enabled = False
-                    split.operator("mantaflowhelper.bake", text="Baking Particles - ESC to pause").mode = 2
+                    split.operator("fluid.pause_bake", text="Baking Particles - ESC to pause")
                 elif not domain.has_cache_baked_particles and not domain.is_cache_baking_particles:
-                    split.operator("mantaflowhelper.bake", text="Bake Particles").mode = 8
+                    split.operator("fluid.bake_particles", text="Bake Particles")
                 else:
-                    split.operator("mantaflowhelper.bake", text="Free Particles").mode = 9
+                    split.operator("fluid.free_particles", text="Free Particles")
 
 
 class MFHELPER_PT_noise(bpy.types.Panel):
