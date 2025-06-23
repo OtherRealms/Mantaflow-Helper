@@ -14,9 +14,9 @@
 bl_info = {
     "name" : "MantaFlow Helper",
     "author" : "Pablo Tochez A. contact@pablotochez.com, Other Realms",
-    "description" : "Provides controls for a domain object",
-    "blender" : (2, 80, 0),
-    "version" : (0, 0, 2),
+    "description" : "Provides controls for fluid baking",
+    "blender" : (3, 6, 0),
+    "version" : (0, 0, 3),
     "location" : "3D View -> N-Panel-> Mantaflow Helper",
     "warning" : "",
     "category" : "Interface"
@@ -91,7 +91,12 @@ class MFHELPER_PT_Panel(bpy.types.Panel):
                     split.operator("mantaflowhelper.bake", text="Bake All").mode = 6
                 else:
                     split.operator("mantaflowhelper.bake", text="Free All").mode = 7  
+        elif context.active_object:
+            layout.operator('mantaflowhelper.make_fluid')
 
+        else:
+            layout.label(text='No Active Object')
+                            
 class MFHELPER_PT_particles(bpy.types.Panel):
     bl_label = "Particles"
     bl_parent_id = 'MFHELPER_PT_Panel'
@@ -202,7 +207,6 @@ class MFHELPER_PT_particles(bpy.types.Panel):
                 else:
                     split.operator("mantaflowhelper.bake", text="Free Particles",icon = 'PARTICLES').mode =9
 
-
 class MFHELPER_PT_noise(bpy.types.Panel):
     bl_label = "Use Noise"
     bl_parent_id = 'MFHELPER_PT_Panel'
@@ -228,30 +232,41 @@ class MFHELPER_PT_noise(bpy.types.Panel):
 
         split = layout.split()
 
-        if domain.use_noise and domain.cache_type == 'MODULAR':
-            bake_incomplete = (domain.cache_frame_pause_noise < domain.cache_frame_end)
-            
-            if  not domain.has_cache_baked_data:
-                note = layout.split()
-                note_flag = False
-                note.enabled = note_flag
-                note.label(icon='INFO', text="Unbaked Data: Bake Data first.")
+        if domain.use_noise:
+            flow = layout.grid_flow(row_major=True, columns=0, even_columns=True, even_rows=False, align=False)
+            flow.enabled = not domain.is_cache_baking_any and not domain.has_cache_baked_data
 
-            elif domain.has_cache_baked_noise and not domain.is_cache_baking_noise and bake_incomplete :
-                col = split.column()
-                col.operator("mantaflowhelper.bake", text="Resume Noise").mode = 3
-                col = split.column()
-                col.operator("mantaflowhelper.bake", text="Free Noise",icon = 'TRASH').mode = 4
-            elif not domain.has_cache_baked_noise and domain.is_cache_baking_noise:
-                split.enabled = False
-                split.operator("mantaflowhelper.bake", text="Baking Data - ESC to pause").mode = 2
-            else:
-                split = layout.split()
+            col = flow.column()
+            col.prop(domain, "noise_scale", text="Upres Factor")
+            col.prop(domain, "noise_strength", text="Strength")
 
-                split.operator("mantaflowhelper.bake", text="Bake Noise").mode = 3
+            col = flow.column()
+            col.prop(domain, "noise_pos_scale", text="Scale")
+            col.prop(domain, "noise_time_anim", text="Time")
 
-                split.operator("mantaflowhelper.bake", text="Free Noise",icon = 'TRASH').mode = 4
+            if domain.cache_type == 'MODULAR':
+                bake_incomplete = (domain.cache_frame_pause_noise < domain.cache_frame_end)
+                
+                if  not domain.has_cache_baked_data:
+                    note = layout.split()
+                    note_flag = False
+                    note.enabled = note_flag
+                    note.label(icon='INFO', text="Unbaked Data: Bake Data first.")
 
+                elif domain.has_cache_baked_noise and not domain.is_cache_baking_noise and bake_incomplete :
+                    col = split.column()
+                    col.operator("mantaflowhelper.bake", text="Resume Noise").mode = 3
+                    col = split.column()
+                    col.operator("mantaflowhelper.bake", text="Free Noise",icon = 'TRASH').mode = 4
+                elif not domain.has_cache_baked_noise and domain.is_cache_baking_noise:
+                    split.enabled = False
+                    split.operator("mantaflowhelper.bake", text="Baking Data - ESC to pause").mode = 2
+                else:
+                    split = layout.split()
+
+                    split.operator("mantaflowhelper.bake", text="Bake Noise").mode = 3
+
+                    split.operator("mantaflowhelper.bake", text="Free Noise",icon = 'TRASH').mode = 4
 
 class MFHELPER_PT_mesh(bpy.types.Panel):
     bl_label = "Mesh"
@@ -342,35 +357,56 @@ class MFHELPER_OT_bake(bpy.types.Operator):
         override['object'] = context.scene.mf_domain
         override['selected_objects'] = [context.scene.mf_domain]
 
-
-        if self.mode ==0:
-            bpy.ops.fluid.bake_data(override,'INVOKE_DEFAULT')
-        elif self.mode == 1:
-            bpy.ops.fluid.free_data(override,'INVOKE_DEFAULT')
-        elif self.mode == 2:
-            bpy.ops.fluid.pause_bake(override,'INVOKE_DEFAULT')
-        elif self.mode == 3:
-            bpy.ops.fluid.bake_noise(override,'INVOKE_DEFAULT')
-        elif self.mode == 4:
-            bpy.ops.fluid.free_noise(override,'INVOKE_DEFAULT')
-        elif self.mode == 5:
-            bpy.ops.fluid.free_noise(override,'INVOKE_DEFAULT')
-        elif self.mode == 6:
-            bpy.ops.fluid.bake_all(override,'INVOKE_DEFAULT')
-        elif self.mode == 7:
-            bpy.ops.fluid.free_all(override,'INVOKE_DEFAULT')
-        elif self.mode == 8:
-            bpy.ops.fluid.bake_particles(override,'INVOKE_DEFAULT')
-        elif self.mode == 9:
-            bpy.ops.fluid.free_particles(override,'INVOKE_DEFAULT')
-        elif self.mode == 10:
-            bpy.ops.fluid.bake_mesh(override,'INVOKE_DEFAULT')
-        elif self.mode == 11:
-            bpy.ops.fluid.free_mesh(override,'INVOKE_DEFAULT')
+        with context.temp_override(**override):
+            if self.mode ==0:
+                bpy.ops.fluid.bake_data('INVOKE_DEFAULT')
+            elif self.mode == 1:
+                bpy.ops.fluid.free_data('INVOKE_DEFAULT')
+            elif self.mode == 2:
+                bpy.ops.fluid.pause_bake('INVOKE_DEFAULT')
+            elif self.mode == 3:
+                bpy.ops.fluid.bake_noise('INVOKE_DEFAULT')
+            elif self.mode == 4:
+                bpy.ops.fluid.free_noise('INVOKE_DEFAULT')
+            elif self.mode == 5:
+                bpy.ops.fluid.free_noise('INVOKE_DEFAULT')
+            elif self.mode == 6:
+                bpy.ops.fluid.bake_all('INVOKE_DEFAULT')
+            elif self.mode == 7:
+                bpy.ops.fluid.free_all('INVOKE_DEFAULT')
+            elif self.mode == 8:
+                bpy.ops.fluid.bake_particles('INVOKE_DEFAULT')
+            elif self.mode == 9:
+                bpy.ops.fluid.free_particles('INVOKE_DEFAULT')
+            elif self.mode == 10:
+                bpy.ops.fluid.bake_mesh('INVOKE_DEFAULT')
+            elif self.mode == 11:
+                bpy.ops.fluid.free_mesh('INVOKE_DEFAULT')
 
 
         return {'FINISHED'}
 
+class MFHELPER_OT_make_fluid(bpy.types.Operator):
+    bl_idname = "mantaflowhelper.make_fluid" 
+    bl_label = "Make Domain"
+    bl_description = "Assign fluid modifiers to active object" 
+
+    mode: IntProperty()
+    @classmethod
+    def poll(self,context):
+        return context.active_object
+
+    def execute(self,context):
+        ob = context.active_object
+        for _mod in ob.modifiers:
+            if _mod.type == 'FLUID':
+                self.report({'WARNING'},"Fluid already exists")
+                return {'FINISHED'}
+
+        mod = ob.modifiers.new("Fluid",type='FLUID')
+        mod.fluid_type = 'DOMAIN'
+        context.scene.mf_domain = ob
+        return {'FINISHED'}
 
 def domain_callback(self,object):
     try:
@@ -379,7 +415,9 @@ def domain_callback(self,object):
     except:
         return None
 
-classes = (MFHELPER_PT_Panel, MFHELPER_OT_bake, MFHELPER_PT_mesh, MFHELPER_PT_noise, MFHELPER_PT_particles, MFHELPER_OT_selectDomain)
+classes = (MFHELPER_OT_selectDomain,MFHELPER_OT_make_fluid, MFHELPER_OT_bake,
+           MFHELPER_PT_Panel,  MFHELPER_PT_mesh, MFHELPER_PT_noise, MFHELPER_PT_particles, 
+           )
 
 def register():
     from bpy.utils import register_class
